@@ -10,7 +10,7 @@
         "projectUniqueName": "C:\\Users\\moren\\Desktop\\projects\\telemetry-dashboard\\backend\\Telemetry.Api\\Telemetry.Api.csproj",
         "projectName": "Telemetry.Api",
         "projectPath": "C:\\Users\\moren\\Desktop\\projects\\telemetry-dashboard\\backend\\Telemetry.Api\\Telemetry.Api.csproj",
-        "packagesPath": "c:\\Users\\moren\\Desktop\\projects\\.dotnet\\.nuget\\packages\\",
+        "packagesPath": "C:\\Users\\moren\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\moren\\Desktop\\projects\\telemetry-dashboard\\backend\\Telemetry.Api\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
@@ -51,6 +51,10 @@
             "Microsoft.AspNetCore.OpenApi": {
               "target": "Package",
               "version": "[10.0.5, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[10.0.1, )"
             }
           },
           "imports": [
@@ -496,7 +500,7 @@
         "projectUniqueName": "C:\\Users\\moren\\Desktop\\projects\\telemetry-dashboard\\backend\\Telemetry.Core\\Telemetry.Core.csproj",
         "projectName": "Telemetry.Core",
         "projectPath": "C:\\Users\\moren\\Desktop\\projects\\telemetry-dashboard\\backend\\Telemetry.Core\\Telemetry.Core.csproj",
-        "packagesPath": "c:\\Users\\moren\\Desktop\\projects\\.dotnet\\.nuget\\packages\\",
+        "packagesPath": "C:\\Users\\moren\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\moren\\Desktop\\projects\\telemetry-dashboard\\backend\\Telemetry.Core\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [

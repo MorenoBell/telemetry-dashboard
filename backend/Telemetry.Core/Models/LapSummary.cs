@@ -1,8 +1,9 @@
 namespace Telemetry.Core.Models;
 
 public sealed record LapSummary(
-    int LapNumber,
-    int Samples,
-    double DurationSeconds,
-    double AverageSpeedKph,
-    double MaxSpeedKph);
+    string LapId,
+    int SampleCount,
+    double MaxSpeed,
+    double AverageSpeed,
+    double MaxBrake,
+    double AverageThrottle);

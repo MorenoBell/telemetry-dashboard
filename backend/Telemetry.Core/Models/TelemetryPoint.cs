@@ -1,10 +1,12 @@
 namespace Telemetry.Core.Models;
 
 public sealed record TelemetryPoint(
-    int Sample,
-    double TimeSeconds,
-    double SpeedKph,
+    double Time,
+    double Distance,
+    double Speed,
     double Throttle,
     double Brake,
     int Rpm,
-    int Gear);
+    int Gear,
+    double Latitude,
+    double Longitude);

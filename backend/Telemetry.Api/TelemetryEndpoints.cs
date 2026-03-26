@@ -8,26 +8,53 @@ public static class TelemetryEndpoints
     {
         var group = app.MapGroup("/api/telemetry").WithTags("Telemetry");
 
-        group.MapGet("/", (ITelemetryReader reader) =>
+        group.MapGet("/laps", (ITelemetryReader reader) =>
         {
-            var files = reader.GetAvailableFiles();
-            return Results.Ok(files);
+            var laps = reader.GetAvailableLapIds()
+                .Select(id => new { id })
+                .ToArray();
+
+            return Results.Ok(laps);
         });
 
-        group.MapGet("/{fileName}/points", async (string fileName, ITelemetryReader reader, CancellationToken cancellationToken) =>
+        group.MapGet("/lap/{id}", async (string id, ITelemetryReader reader, CancellationToken cancellationToken) =>
         {
-            var points = await reader.ReadTelemetryAsync(fileName, cancellationToken);
-            return points.Count == 0
-                ? Results.NotFound(new { message = $"Telemetry file '{fileName}' was not found or was empty." })
-                : Results.Ok(points);
+            var lap = await reader.ReadLapAsync(id, cancellationToken);
+            if (lap is null)
+            {
+                return Results.NotFound(new { message = $"Lap '{id}' was not found." });
+            }
+
+            return lap.ValidationErrors.Count > 0
+                ? Results.UnprocessableEntity(new
+                {
+                    message = $"Lap '{id}' contains malformed telemetry rows.",
+                    errors = lap.ValidationErrors
+                })
+                : Results.Ok(lap);
         });
 
-        group.MapGet("/{fileName}/laps", async (string fileName, ITelemetryReader reader, CancellationToken cancellationToken) =>
+        group.MapGet("/lap/{id}/summary", async (string id, ITelemetryReader reader, CancellationToken cancellationToken) =>
         {
-            var summaries = await reader.ReadLapSummariesAsync(fileName, cancellationToken);
-            return summaries.Count == 0
-                ? Results.NotFound(new { message = $"Telemetry file '{fileName}' was not found or was empty." })
-                : Results.Ok(summaries);
+            var lap = await reader.ReadLapAsync(id, cancellationToken);
+            if (lap is null)
+            {
+                return Results.NotFound(new { message = $"Lap '{id}' was not found." });
+            }
+
+            if (lap.ValidationErrors.Count > 0)
+            {
+                return Results.UnprocessableEntity(new
+                {
+                    message = $"Lap '{id}' contains malformed telemetry rows.",
+                    errors = lap.ValidationErrors
+                });
+            }
+
+            var summary = await reader.ReadLapSummaryAsync(id, cancellationToken);
+            return summary is null
+                ? Results.NotFound(new { message = $"Lap '{id}' did not contain any telemetry samples." })
+                : Results.Ok(summary);
         });
 
         return group;

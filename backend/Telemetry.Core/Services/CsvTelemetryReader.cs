@@ -5,7 +5,18 @@ namespace Telemetry.Core.Services;
 
 public sealed class CsvTelemetryReader : ITelemetryReader
 {
-    private static readonly string[] SupportedExtensions = [".csv"];
+    private static readonly string[] RequiredHeaders =
+    [
+        "time",
+        "distance",
+        "speed",
+        "throttle",
+        "brake",
+        "rpm",
+        "gear",
+        "latitude",
+        "longitude"
+    ];
 
     private readonly string _samplesDirectory;
 
@@ -14,7 +25,7 @@ public sealed class CsvTelemetryReader : ITelemetryReader
         _samplesDirectory = samplesDirectory;
     }
 
-    public IReadOnlyList<string> GetAvailableFiles()
+    public IReadOnlyList<string> GetAvailableLapIds()
     {
         if (!Directory.Exists(_samplesDirectory))
         {
@@ -22,26 +33,25 @@ public sealed class CsvTelemetryReader : ITelemetryReader
         }
 
         return Directory
-            .EnumerateFiles(_samplesDirectory)
-            .Where(path => SupportedExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
-            .Select(path => Path.GetFileName(path)!)
+            .EnumerateFiles(_samplesDirectory, "*.csv")
+            .Select(path => Path.GetFileNameWithoutExtension(path))
+            .Where(name => !string.IsNullOrWhiteSpace(name))
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+            .ToArray()!;
     }
 
-    public async Task<IReadOnlyList<TelemetryPoint>> ReadTelemetryAsync(string fileName, CancellationToken cancellationToken = default)
+    public async Task<TelemetryLap?> ReadLapAsync(string lapId, CancellationToken cancellationToken = default)
     {
-        var filePath = ResolveFilePath(fileName);
-
+        var filePath = ResolveFilePath(lapId);
         if (!File.Exists(filePath))
         {
-            return [];
+            return null;
         }
 
         var lines = await File.ReadAllLinesAsync(filePath, cancellationToken);
-        if (lines.Length <= 1)
+        if (lines.Length == 0)
         {
-            return [];
+            return new TelemetryLap(lapId, Path.GetFileName(filePath), [], [new TelemetryValidationError(1, "header", "The CSV file is empty.")]);
         }
 
         var headers = SplitCsvLine(lines[0]);
@@ -49,104 +59,169 @@ public sealed class CsvTelemetryReader : ITelemetryReader
             .Select((header, index) => new KeyValuePair<string, int>(Normalize(header), index))
             .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
 
+        var errors = ValidateHeaders(headerIndex);
         var points = new List<TelemetryPoint>();
 
-        for (var lineIndex = 1; lineIndex < lines.Length; lineIndex++)
+        if (errors.Count == 0)
         {
-            var line = lines[lineIndex];
-            if (string.IsNullOrWhiteSpace(line))
+            for (var lineNumber = 2; lineNumber <= lines.Length; lineNumber++)
             {
-                continue;
+                var rawLine = lines[lineNumber - 1];
+                if (string.IsNullOrWhiteSpace(rawLine))
+                {
+                    continue;
+                }
+
+                var columns = SplitCsvLine(rawLine);
+                var point = TryParsePoint(columns, headerIndex, lineNumber, errors);
+                if (point is not null)
+                {
+                    points.Add(point);
+                }
             }
-
-            var columns = SplitCsvLine(line);
-            points.Add(new TelemetryPoint(
-                Sample: ReadInt(columns, headerIndex, lineIndex, "sample", "index"),
-                TimeSeconds: ReadDouble(columns, headerIndex, lineIndex, "time", "timeseconds", "seconds", "elapsedtime"),
-                SpeedKph: ReadDouble(columns, headerIndex, lineIndex, "speed", "speedkph", "speedkmh"),
-                Throttle: ReadDouble(columns, headerIndex, lineIndex, "throttle", "throttlepct", "throttlepercent"),
-                Brake: ReadDouble(columns, headerIndex, lineIndex, "brake", "brakepct", "brakepercent"),
-                Rpm: ReadInt(columns, headerIndex, lineIndex, "rpm", "enginerpm"),
-                Gear: ReadInt(columns, headerIndex, lineIndex, "gear")));
         }
 
-        return points;
+        return new TelemetryLap(lapId, Path.GetFileName(filePath), points, errors);
     }
 
-    public async Task<IReadOnlyList<LapSummary>> ReadLapSummariesAsync(string fileName, CancellationToken cancellationToken = default)
+    public async Task<LapSummary?> ReadLapSummaryAsync(string lapId, CancellationToken cancellationToken = default)
     {
-        var points = await ReadTelemetryAsync(fileName, cancellationToken);
-        if (points.Count == 0)
+        var lap = await ReadLapAsync(lapId, cancellationToken);
+        if (lap is null || lap.ValidationErrors.Count > 0 || lap.Points.Count == 0)
         {
-            return [];
+            return null;
         }
 
-        var lapDuration = points[^1].TimeSeconds <= 0 ? 0 : points[^1].TimeSeconds;
-        var averageSpeed = points.Average(point => point.SpeedKph);
-        var maxSpeed = points.Max(point => point.SpeedKph);
-
-        return
-        [
-            new LapSummary(
-                LapNumber: 1,
-                Samples: points.Count,
-                DurationSeconds: Math.Round(lapDuration, 3),
-                AverageSpeedKph: Math.Round(averageSpeed, 2),
-                MaxSpeedKph: Math.Round(maxSpeed, 2))
-        ];
+        return new LapSummary(
+            LapId: lap.Id,
+            SampleCount: lap.Points.Count,
+            MaxSpeed: Math.Round(lap.Points.Max(point => point.Speed), 2),
+            AverageSpeed: Math.Round(lap.Points.Average(point => point.Speed), 2),
+            MaxBrake: Math.Round(lap.Points.Max(point => point.Brake), 2),
+            AverageThrottle: Math.Round(lap.Points.Average(point => point.Throttle), 2));
     }
 
-    private string ResolveFilePath(string fileName)
+    private string ResolveFilePath(string lapId)
     {
-        if (string.IsNullOrWhiteSpace(fileName))
+        if (string.IsNullOrWhiteSpace(lapId))
         {
-            throw new ArgumentException("A telemetry file name is required.", nameof(fileName));
+            throw new ArgumentException("A lap id is required.", nameof(lapId));
         }
 
-        var safeFileName = Path.GetFileName(fileName);
-        return Path.Combine(_samplesDirectory, safeFileName);
+        var safeLapId = Path.GetFileNameWithoutExtension(lapId);
+        return Path.Combine(_samplesDirectory, $"{safeLapId}.csv");
     }
 
-    private static int ReadInt(
-        IReadOnlyList<string> columns,
-        IReadOnlyDictionary<string, int> headerIndex,
-        int fallbackSample,
-        params string[] candidateHeaders)
+    private static List<TelemetryValidationError> ValidateHeaders(IReadOnlyDictionary<string, int> headerIndex)
     {
-        var value = ReadValue(columns, headerIndex, candidateHeaders);
-        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
-            ? parsed
-            : fallbackSample;
-    }
+        var errors = new List<TelemetryValidationError>();
 
-    private static double ReadDouble(
-        IReadOnlyList<string> columns,
-        IReadOnlyDictionary<string, int> headerIndex,
-        int fallbackSample,
-        params string[] candidateHeaders)
-    {
-        var value = ReadValue(columns, headerIndex, candidateHeaders);
-        return double.TryParse(value, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var parsed)
-            ? parsed
-            : fallbackSample;
-    }
-
-    private static string ReadValue(
-        IReadOnlyList<string> columns,
-        IReadOnlyDictionary<string, int> headerIndex,
-        params string[] candidateHeaders)
-    {
-        foreach (var candidate in candidateHeaders)
+        foreach (var requiredHeader in RequiredHeaders)
         {
-            if (!headerIndex.TryGetValue(candidate, out var index) || index >= columns.Count)
+            if (!headerIndex.ContainsKey(requiredHeader))
             {
-                continue;
+                errors.Add(new TelemetryValidationError(1, requiredHeader, $"Missing required column '{requiredHeader}'."));
             }
-
-            return columns[index];
         }
 
-        return string.Empty;
+        return errors;
+    }
+
+    private static TelemetryPoint? TryParsePoint(
+        IReadOnlyList<string> columns,
+        IReadOnlyDictionary<string, int> headerIndex,
+        int lineNumber,
+        ICollection<TelemetryValidationError> errors)
+    {
+        if (!TryReadDouble(columns, headerIndex, lineNumber, "time", errors, out var time) ||
+            !TryReadDouble(columns, headerIndex, lineNumber, "distance", errors, out var distance) ||
+            !TryReadDouble(columns, headerIndex, lineNumber, "speed", errors, out var speed) ||
+            !TryReadDouble(columns, headerIndex, lineNumber, "throttle", errors, out var throttle) ||
+            !TryReadDouble(columns, headerIndex, lineNumber, "brake", errors, out var brake) ||
+            !TryReadInt(columns, headerIndex, lineNumber, "rpm", errors, out var rpm) ||
+            !TryReadInt(columns, headerIndex, lineNumber, "gear", errors, out var gear) ||
+            !TryReadDouble(columns, headerIndex, lineNumber, "latitude", errors, out var latitude) ||
+            !TryReadDouble(columns, headerIndex, lineNumber, "longitude", errors, out var longitude))
+        {
+            return null;
+        }
+
+        return new TelemetryPoint(time, distance, speed, throttle, brake, rpm, gear, latitude, longitude);
+    }
+
+    private static bool TryReadDouble(
+        IReadOnlyList<string> columns,
+        IReadOnlyDictionary<string, int> headerIndex,
+        int lineNumber,
+        string columnName,
+        ICollection<TelemetryValidationError> errors,
+        out double value)
+    {
+        value = default;
+
+        if (!TryGetColumnValue(columns, headerIndex, lineNumber, columnName, errors, out var rawValue))
+        {
+            return false;
+        }
+
+        if (double.TryParse(rawValue, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out value))
+        {
+            return true;
+        }
+
+        errors.Add(new TelemetryValidationError(lineNumber, columnName, $"'{rawValue}' is not a valid number."));
+        return false;
+    }
+
+    private static bool TryReadInt(
+        IReadOnlyList<string> columns,
+        IReadOnlyDictionary<string, int> headerIndex,
+        int lineNumber,
+        string columnName,
+        ICollection<TelemetryValidationError> errors,
+        out int value)
+    {
+        value = default;
+
+        if (!TryGetColumnValue(columns, headerIndex, lineNumber, columnName, errors, out var rawValue))
+        {
+            return false;
+        }
+
+        if (int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+        {
+            return true;
+        }
+
+        errors.Add(new TelemetryValidationError(lineNumber, columnName, $"'{rawValue}' is not a valid integer."));
+        return false;
+    }
+
+    private static bool TryGetColumnValue(
+        IReadOnlyList<string> columns,
+        IReadOnlyDictionary<string, int> headerIndex,
+        int lineNumber,
+        string columnName,
+        ICollection<TelemetryValidationError> errors,
+        out string value)
+    {
+        value = string.Empty;
+
+        var columnIndex = headerIndex[columnName];
+        if (columnIndex >= columns.Count)
+        {
+            errors.Add(new TelemetryValidationError(lineNumber, columnName, $"Column '{columnName}' is missing a value."));
+            return false;
+        }
+
+        value = columns[columnIndex];
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            return true;
+        }
+
+        errors.Add(new TelemetryValidationError(lineNumber, columnName, $"Column '{columnName}' is empty."));
+        return false;
     }
 
     private static string[] SplitCsvLine(string line)

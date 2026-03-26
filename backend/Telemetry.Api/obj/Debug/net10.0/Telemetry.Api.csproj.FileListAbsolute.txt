@@ -34,3 +34,6 @@ C:\Users\moren\Desktop\projects\telemetry-dashboard\backend\Telemetry.Api\obj\De
 C:\Users\moren\Desktop\projects\telemetry-dashboard\backend\Telemetry.Api\obj\Debug\net10.0\Telemetry.Api.pdb
 C:\Users\moren\Desktop\projects\telemetry-dashboard\backend\Telemetry.Api\obj\Debug\net10.0\Telemetry.Api.genruntimeconfig.cache
 C:\Users\moren\Desktop\projects\telemetry-dashboard\backend\Telemetry.Api\obj\Debug\net10.0\ref\Telemetry.Api.dll
+C:\Users\moren\Desktop\projects\telemetry-dashboard\backend\Telemetry.Api\bin\Debug\net10.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\moren\Desktop\projects\telemetry-dashboard\backend\Telemetry.Api\bin\Debug\net10.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\moren\Desktop\projects\telemetry-dashboard\backend\Telemetry.Api\bin\Debug\net10.0\Swashbuckle.AspNetCore.SwaggerUI.dll
