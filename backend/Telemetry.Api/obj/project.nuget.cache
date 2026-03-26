@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "4PwtBA/iw0U=",
+  "dgSpecHash": "0FLJwWA8cEQ=",
   "success": true,
   "projectFilePath": "C:\\Users\\moren\\Desktop\\projects\\telemetry-dashboard\\backend\\Telemetry.Api\\Telemetry.Api.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\moren\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.5\\microsoft.aspnetcore.openapi.10.0.5.nupkg.sha512",
-    "C:\\Users\\moren\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512"
+    "c:\\Users\\moren\\Desktop\\projects\\.dotnet\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.5\\microsoft.aspnetcore.openapi.10.0.5.nupkg.sha512",
+    "c:\\Users\\moren\\Desktop\\projects\\.dotnet\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512"
   ],
   "logs": []
 }

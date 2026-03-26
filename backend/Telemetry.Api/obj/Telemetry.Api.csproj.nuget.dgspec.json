@@ -10,7 +10,7 @@
         "projectUniqueName": "C:\\Users\\moren\\Desktop\\projects\\telemetry-dashboard\\backend\\Telemetry.Api\\Telemetry.Api.csproj",
         "projectName": "Telemetry.Api",
         "projectPath": "C:\\Users\\moren\\Desktop\\projects\\telemetry-dashboard\\backend\\Telemetry.Api\\Telemetry.Api.csproj",
-        "packagesPath": "C:\\Users\\moren\\.nuget\\packages\\",
+        "packagesPath": "c:\\Users\\moren\\Desktop\\projects\\.dotnet\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\moren\\Desktop\\projects\\telemetry-dashboard\\backend\\Telemetry.Api\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
@@ -496,7 +496,7 @@
         "projectUniqueName": "C:\\Users\\moren\\Desktop\\projects\\telemetry-dashboard\\backend\\Telemetry.Core\\Telemetry.Core.csproj",
         "projectName": "Telemetry.Core",
         "projectPath": "C:\\Users\\moren\\Desktop\\projects\\telemetry-dashboard\\backend\\Telemetry.Core\\Telemetry.Core.csproj",
-        "packagesPath": "C:\\Users\\moren\\.nuget\\packages\\",
+        "packagesPath": "c:\\Users\\moren\\Desktop\\projects\\.dotnet\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\moren\\Desktop\\projects\\telemetry-dashboard\\backend\\Telemetry.Core\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
