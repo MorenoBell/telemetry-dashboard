@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Telemetry.Api/Telemetry.Api.csproj" />
+  <Project Path="Telemetry.Core/Telemetry.Core.csproj" />
+</Solution>
